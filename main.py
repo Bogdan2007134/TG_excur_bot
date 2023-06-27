@@ -11,7 +11,7 @@ all_users = {}
 
 @bot.message_handler(commands=['start'])  # Блок комманд
 def start_func(message):
-
+    
     try:
         all_users[message.chat.id]['progress']
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
