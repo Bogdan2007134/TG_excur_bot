@@ -1,71 +1,90 @@
-import telebot
-from telebot import types
 from random import randint
-
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InputFile
+from aiogram.dispatcher.filters import Command
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from volgograd.data_text import *
-bot = telebot.TeleBot("6259772380:AAHJIg_qvgJD-0ndlEJihRrTP8trb1JWgRY")
+from Anti_flood.middlewares import ThrottlingMiddleware
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from Config._Config_ import BOT_ON
+from TOKEN_BOT.TOKEN import tokens
+from db import Database
+from BUTTON_ import mainMenu
 
+storage = MemoryStorage()
+bot = Bot(token=tokens)
+dp = Dispatcher(bot=bot, storage=storage)
 word_good = ["Интересно", "Прикольно", "Удивительно"]
+
+db = Database('database.db')
 
 all_users = {}
 
-@bot.message_handler(commands=['start'])  # Блок комманд
-def start_func(message):
+async def on_startup(message: types.Message):
+    print(BOT_ON)
     
-    try:
-        all_users[message.chat.id]['progress']
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        volgograd = types.InlineKeyboardButton('/Волгоград')
-        markup.add(volgograd)
-        
-        bot.send_message(message.chat.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=markup)
-        
-    except KeyError:
-        all_users[message.chat.id] = {'progress': 0,
-                                    'direction': "",
-                                    'condition' : False,
-                                    'interactiv_direction' : 0,
-                                    }
-    
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        volgograd = types.InlineKeyboardButton('/Волгоград')
-        markup.add(volgograd)
-        
-        bot.send_message(message.chat.id, f'Приветствую тебя {message.chat.first_name} в нашем боте', reply_markup=markup)
 
-@bot.message_handler(commands=['Волгоград'])  # Блок комманд
-def volgograd_func(message):
-    markup = types.ReplyKeyboardMarkup(
-        resize_keyboard=True, row_width=len(volgograd_list))
+@dp.message_handler(commands=['start'])  # Блок комманд
+async def start_func(message: types.Message):
+    if(not db.user_exists(message.from_user.id)):
+        db.add_user(message.from_user.id)
+        await bot.send_message(message.from_user.id, "Укажите ваш ник!")
+    else:
+        await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu)
+
+@dp.message_handler()
+async def bot_message(message: types.Message):
+    if message.chat.type == 'private':
+        if message.text == 'ПРОФИЛЬ':
+            user_nickname = "Ваш ник:" + db.get_nickname(message.from_user.id)
+            await bot.send_message(message.from_user.id, user_nickname)
+        else:
+            if db.get_signup(message.from_user.id) == 'setnickname':
+                if(len(message.text) > 15):
+                    await bot.send_message(message.from_user.id, "Никнейм не должен превышать 15 символов")
+                elif '@' in message.text or '/' in message.text:
+                    await bot.send_message(message.from_user.id, "Ваш никнейм содержит запрещеный символ!")
+                else:
+                    db.set_nickname(message.from_user.id, message.text)
+                    db.set_signup(message.from_user.id, 'done')
+                    await bot.send_message(message.from_user.id, "Регистрация прошла успешно!", reply_markup=mainMenu)
+            else:
+                await bot.send_message(message.from_user.id, "Что?")
+
+
+@dp.message_handler(commands=['Волгоград'])  # Блок комманд
+async def volgograd_func(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard = True, row_width=len(volgograd_list))
     if all_users[message.chat.id]["direction"] == "":
-        buy_button = types.InlineKeyboardButton('/Купить_экскурсию')
+        buy_button = types.InlineKeyboardButton('Купить_экскурсию')
         
         markup.add(buy_button)
         for i in volgograd_list:
             markup.add(i)
             
-        bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
+        await bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
     else:
         markup.add(all_users[message.chat.id]["direction"])
-        bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
+        await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
 
-@bot.message_handler(commands=['Купить_экскурсию'])  # Блок комманд
-def buy_func(message):
+@dp.message_handler(text=['Купить_экскурсию'])  # Блок комманд
+async def buy_func(message):
     try:
-        bot.send_message(message.chat.id, "В будущем тут будет система оплаты но будем\nсчитать что вы уже все оплатили")
+        await bot.send_message(message.chat.id, "В будущем тут будет система оплаты но будем\nсчитать что вы уже все оплатили")
         all_users[message.chat.id]['condition'] = True
-        bot.send_message(message.chat.id, "Оплата успешно прошла")
+        await bot.send_message(message.chat.id, "Оплата успешно прошла")
     except KeyError as key:
-        bot.send_message(message.chat.id, "Извините за неудобства, но начните сначала")
+        await bot.send_message(message.chat.id, "Извините за неудобства, но начните сначала")
         print(f"[ERROR] error in buy_func {key}")
-        start_func(message)
+        await start_func(message)
     
 
 
 
 
-@bot.message_handler(content_types=['text'])  # Блок комманд
-def vol_Scen(message):
+@dp.message_handler(content_types=['text'])  # Блок комманд
+async def vol_Scen(message):
     try:
 
         if message.text == 'Я думаю это первое':
@@ -83,8 +102,7 @@ def vol_Scen(message):
             next = types.InlineKeyboardButton(
                 word_good[randint(0, len(word_good)-1)])
             markup.add(next)
-            bot.send_message(
-                message.chat.id, "Начнем нашу экскурсию", reply_markup=markup)
+            await bot.send_message(message.chat.id, "Начнем нашу экскурсию", reply_markup=markup)
         elif all_users[message.chat.id]['condition'] == True and (message.text in word_good or message.text == 'Я думаю это первое' or message.text == 'Я думаю это второе' or message.text == 'Я думаю это третье'):
             all_users[message.chat.id]['progress'] += 1
             markup = types.ReplyKeyboardMarkup(
@@ -103,31 +121,36 @@ def vol_Scen(message):
                 markup.add(next, helping)
                 
             if len(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']][0]) == 1: 
-                bot.send_message(message.chat.id, volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][0], reply_markup=markup)
+                await bot.send_message(message.chat.id, volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][0], reply_markup=markup)
             else:
-                bot.send_message(message.chat.id, volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']], reply_markup=markup)
+                await bot.send_message(message.chat.id, volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']], reply_markup=markup)
            
    
-            if len(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']][1]) == 1:
-                bot.send_photo(message.chat.id, open(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][1], 'rb'), reply_markup=markup)
+            if len(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']][0]) == 1:
+                await bot.send_photo(message.chat.id, open(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][1], 'rb'), reply_markup=markup)
             else:
-                bot.send_photo(message.chat.id, open(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']][1], 'rb'), reply_markup=markup)
+                await bot.send_photo(message.chat.id, open(volgograd[all_users[message.chat.id]['direction'].replace(" ", "")][all_users[message.chat.id]['progress']][all_users[message.chat.id]['interactiv_direction']][0], 'rb'), reply_markup=markup)
         else:
-            bot.send_message(message.chat.id, "Пожалуйста пользуйтесь встроенными командами\n\nИли\n\nСкорее всего вы еще не оплатили экскурсию,\nсамое время это сделать")
+            await bot.send_message(message.chat.id, "Пожалуйста пользуйтесь встроенными командами\n\nИли\n\nСкорее всего вы еще не оплатили экскурсию,\nсамое время это сделать")
             
 
     except FileNotFoundError:
         pass
     
     except IndexError:
-        bot.send_message(message.chat.id, "Экскурсия закончилась, ждем вас еще")
+        await bot.send_message(message.chat.id, "Экскурсия закончилась, ждем вас еще")
         all_users[message.chat.id]['condition'] = False
         all_users[message.chat.id]['direction'] = ""
-        start_func(message)
+        await start_func(message)
+        
         
     except KeyError:
         print(message.chat.id, "неправильно ввел", message.text)
-        bot.send_message(message.chat.id, "Пожалуйста, пользуйтесь командами")
+        await bot.send_message(message.chat.id, "Пожалуйста, пользуйтесь командами")
 
+if __name__ == '__main__':
+    dp.middleware.setup(ThrottlingMiddleware())
+    executor.start_polling(dispatcher=dp,
+                           skip_updates=True,
+                           on_startup=on_startup)
 
-bot.polling(none_stop=True)
