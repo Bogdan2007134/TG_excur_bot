@@ -1,5 +1,6 @@
 from random import randint
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types.message import ContentType
 from aiogram.types import InputFile
 from aiogram.dispatcher.filters import Command
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -8,9 +9,11 @@ from Anti_flood.middlewares import ThrottlingMiddleware
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Config._Config_ import BOT_ON
-from TOKEN_BOT.TOKEN import tokens
+from TOKEN_BOT.TOKEN import tokens, YOOTOKEN
 from db import Database
-from BUTTON_ import mainMenu
+from BUTTON_ import mainMenu, sub_inline_markup
+
+ball = 1
 
 storage = MemoryStorage()
 bot = Bot(token=tokens)
@@ -24,7 +27,7 @@ all_users = {}
 async def on_startup(message: types.Message):
     print(BOT_ON)
     
-
+# Регистрационный блок
 @dp.message_handler(commands=['start'])  # Блок комманд
 async def start_func(message: types.Message):
     if(not db.user_exists(message.from_user.id)):
@@ -39,6 +42,10 @@ async def bot_message(message: types.Message):
         if message.text == 'ПРОФИЛЬ':
             user_nickname = "Ваш ник:" + db.get_nickname(message.from_user.id)
             await bot.send_message(message.from_user.id, user_nickname)
+                
+        elif message.text == 'Купить экскурсию':
+            await bot.send_message(message.from_user.id, "Покупка экскурсии", reply_markup=sub_inline_markup)
+        
         else:
             if db.get_signup(message.from_user.id) == 'setnickname':
                 if(len(message.text) > 15):
@@ -50,10 +57,33 @@ async def bot_message(message: types.Message):
                     db.set_signup(message.from_user.id, 'done')
                     await bot.send_message(message.from_user.id, "Регистрация прошла успешно!", reply_markup=mainMenu)
             else:
-                await bot.send_message(message.from_user.id, "Что?")
+                await bot.send_message(message.from_user.id, "У вас уже установлен ник!")
+                
+# Система оплаты
+@dp.callback_query_handler(text="submonth")
+async def subexcur(call: types.CallbackQuery):
+    await bot.delete_message(call.from_user.id, call.message.message_id)
+    await bot.send_invoice(chat_id=call.from_user.id, title="Оформление товара", description="Тестовое описание товара", payload="month_sub", provider_token=YOOTOKEN, currency="RUB", start_parameter="test_bot", prices=[{"label": "Руб", "amount": 15000}])
 
+@dp.pre_checkout_query_handler()
+async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
-@dp.message_handler(commands=['Волгоград'])  # Блок комманд
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def process_pay(message: types.Message):
+    if message.successful_payment.invoice_payload == "month_sub":
+        operation = '+'
+        excur_sub = 1
+        db.plus(message.from_user.id, operation, excur_sub)
+        await bot.send_message(message.from_user.id, "Вы купили экскурсию!")
+        
+        
+    
+    
+    
+                
+# Блок комманд              
+@dp.message_handler(commands=['Волгоград'])  
 async def volgograd_func(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard = True, row_width=len(volgograd_list))
     if all_users[message.chat.id]["direction"] == "":
@@ -68,22 +98,25 @@ async def volgograd_func(message):
         markup.add(all_users[message.chat.id]["direction"])
         await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
 
-@dp.message_handler(text=['Купить_экскурсию'])  # Блок комманд
+
+
+@dp.message_handler(text=[''])  
 async def buy_func(message):
-    try:
-        await bot.send_message(message.chat.id, "В будущем тут будет система оплаты но будем\nсчитать что вы уже все оплатили")
-        all_users[message.chat.id]['condition'] = True
-        await bot.send_message(message.chat.id, "Оплата успешно прошла")
-    except KeyError as key:
-        await bot.send_message(message.chat.id, "Извините за неудобства, но начните сначала")
-        print(f"[ERROR] error in buy_func {key}")
-        await start_func(message)
+    pass
+    # try:
+    #     await bot.send_message(message.chat.id, "В будущем тут будет система оплаты но будем\nсчитать что вы уже все оплатили")
+    #     all_users[message.chat.id]['condition'] = True
+    #     await bot.send_message(message.chat.id, "Оплата успешно прошла")
+    # except KeyError as key:
+    #     await bot.send_message(message.chat.id, "Извините за неудобства, но начните сначала")
+    #     print(f"[ERROR] error in buy_func {key}")
+    #     await start_func(message)
     
 
 
 
-
-@dp.message_handler(content_types=['text'])  # Блок комманд
+# Основной алгоритм экскурсий
+@dp.message_handler(content_types=['text'])  
 async def vol_Scen(message):
     try:
 
