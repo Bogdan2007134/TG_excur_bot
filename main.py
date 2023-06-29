@@ -43,7 +43,7 @@ async def start_func(message: types.Message):
     else:
         await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu)
 
-# регистрация ника и покупка экскурсии
+# регистрация ника (не тёти Ники) и покупка экскурсии
 @dp.message_handler()
 async def bot_message(message: types.Message):
     if message.chat.type == 'private':
