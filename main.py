@@ -13,17 +13,24 @@ from TOKEN_BOT.TOKEN import tokens, YOOTOKEN
 from db import Database
 from BUTTON_ import mainMenu, sub_inline_markup
 
+# это тут не нужно,но я пытался сделать вычитание и прибавление баллов в бд
 ball = 1
 
+# это подключение бота,токен в папке с аналогичным ему названием
 storage = MemoryStorage()
 bot = Bot(token=tokens)
 dp = Dispatcher(bot=bot, storage=storage)
+
+#это что-то твоё Богдан
 word_good = ["Интересно", "Прикольно", "Удивительно"]
 
+# тут я бд подключил
 db = Database('database.db')
 
+# это можно убрать
 all_users = {}
 
+# вывод страта бота
 async def on_startup(message: types.Message):
     print(BOT_ON)
     
@@ -36,6 +43,7 @@ async def start_func(message: types.Message):
     else:
         await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu)
 
+# регистрация ника и покупка экскурсии
 @dp.message_handler()
 async def bot_message(message: types.Message):
     if message.chat.type == 'private':
@@ -59,16 +67,18 @@ async def bot_message(message: types.Message):
             else:
                 await bot.send_message(message.from_user.id, "У вас уже установлен ник!")
                 
-# Система оплаты
+# Система оплаты:
 @dp.callback_query_handler(text="submonth")
 async def subexcur(call: types.CallbackQuery):
     await bot.delete_message(call.from_user.id, call.message.message_id)
     await bot.send_invoice(chat_id=call.from_user.id, title="Оформление товара", description="Тестовое описание товара", payload="month_sub", provider_token=YOOTOKEN, currency="RUB", start_parameter="test_bot", prices=[{"label": "Руб", "amount": 15000}])
 
+# проверка оплатил ли пользователь ипотеку
 @dp.pre_checkout_query_handler()
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
+    
+# вывод и действия после оплаты
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def process_pay(message: types.Message):
     if message.successful_payment.invoice_payload == "month_sub":
@@ -99,7 +109,7 @@ async def volgograd_func(message):
         await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
 
 
-
+# пока что бесполезная фигня
 @dp.message_handler(text=[''])  
 async def buy_func(message):
     pass
@@ -181,6 +191,7 @@ async def vol_Scen(message):
         print(message.chat.id, "неправильно ввел", message.text)
         await bot.send_message(message.chat.id, "Пожалуйста, пользуйтесь командами")
 
+# активация функций старта бота
 if __name__ == '__main__':
     dp.middleware.setup(ThrottlingMiddleware())
     executor.start_polling(dispatcher=dp,
