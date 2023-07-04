@@ -33,33 +33,10 @@ async def on_startup(message: types.Message):
 async def start_func(message: types.Message) -> None:
     if(not db.user_exists(message.from_user.id)):
         db.add_user(message.from_user.id)
-        await bot.send_message(message.from_user.id, f'Приветствую тебя {message.chat.first_name} в нашем боте', reply_markup=Reg_menu())
+        await bot.send_message(message.from_user.id, f'Приветствую тебя {message.chat.first_name} в нашем боте', reply_markup=mainMenu())
     else:
-        await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu)
-
-@dp.message_handler()
-async def bot_message(message: types.Message):
-    if message.chat.type == 'private':
-        if message.text == 'ПРОФИЛЬ':
-            user_nickname = "Ваш ник:" + db.get_nickname(message.from_user.id)
-            await bot.send_message(message.from_user.id, user_nickname)
-                
-        elif message.text == 'Купить экскурсию':
-            await bot.send_message(message.from_user.id, "Покупка экскурсии", reply_markup=sub_inline_markup)
-        
-        else:
-            if db.get_signup(message.from_user.id) == 'setnickname':
-                if(len(message.text) > 15):
-                    await bot.send_message(message.from_user.id, "Никнейм не должен превышать 15 символов")
-                elif '@' in message.text or '/' in message.text:
-                    await bot.send_message(message.from_user.id, "Ваш никнейм содержит запрещеный символ!")
-                else:
-                    db.set_nickname(message.from_user.id, message.text)
-                    db.set_signup(message.from_user.id, 'done')
-                    await bot.send_message(message.from_user.id, "Регистрация прошла успешно!", reply_markup=mainMenu)
-            else:
-                await bot.send_message(message.from_user.id, "У вас уже установлен ник!")
-                
+        await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu())
+ 
 # Система оплаты:
 @dp.callback_query_handler(text="submonth")
 async def subexcur(call: types.CallbackQuery) -> None:
@@ -111,10 +88,10 @@ async def volgograd_func(message: types.Message) -> None:
     #     for i in volgograd_list:
     #         markup.add(i)
             
-        await bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
-    else:
-        markup.add(all_users[message.chat.id]["direction"])
-        await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
+    #     await bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
+    # else:
+    #     markup.add(all_users[message.chat.id]["direction"])
+    #     await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
 
 
 

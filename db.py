@@ -19,16 +19,16 @@ class Database:
     
 
 # проверка и установка этапа регистрации
-    # def get_signup(self, user_id):
-    #     with self.connection:
-    #         result = self.cursor.execute("SELECT signup FROM users WHERE user_id = ?", (user_id,)).fetchall()
-    #         for row in result:
-    #             signup = str(row[0])
-    #         return signup
+    def get_signup(self, user_id):
+         with self.connection:
+            result = self.cursor.execute("SELECT signup FROM users WHERE user_id = ?", (user_id,)).fetchall()
+            for row in result:
+                 signup = str(row[0])
+            return signup
 
-    # def set_signup(self, user_id, signup):
-    #     with self.connection:
-    #         return self.cursor.execute("UPDATE users SET signup = ? WHERE user_id = ?", (signup, user_id,))
+    def set_signup(self, user_id, signup):
+        with self.connection:
+            return self.cursor.execute("UPDATE users SET signup = ? WHERE user_id = ?", (signup, user_id,))
     
 # установка никнейма
     def get_balance(self, user_id):
