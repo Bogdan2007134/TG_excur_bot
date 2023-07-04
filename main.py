@@ -11,57 +11,38 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Config._Config_ import BOT_ON
 from TOKEN_BOT.TOKEN import tokens, YOOTOKEN
 from db import Database
-from BUTTON_ import mainMenu, sub_inline_markup
+from Markup_Button import mainMenu, sub_inline_markup, Sity
+from Delete_Msg.DelMsg import delete_message 
 
-ball = 1
-
+# регистрация бота
 storage = MemoryStorage()
 bot = Bot(token=tokens)
 dp = Dispatcher(bot=bot, storage=storage)
-word_good = ["Интересно", "Прикольно", "Удивительно"]
 
+# регистрация БД
 db = Database('database.db')
 
+# это мы уберём наверное
 all_users = {}
+word_good = ["Интересно", "Прикольно", "Удивительно"]
 
+# уведомление о старте бота
 async def on_startup(message: types.Message):
     print(BOT_ON)
     
 # Регистрационный блок
-@dp.message_handler(commands=['start'])  # Блок комманд
-async def start_func(message: types.Message):
+@dp.message_handler(commands=['start'], commands_prefix = "/!")  # Блок комманд
+async def start_func(message: types.Message) -> None:
     if(not db.user_exists(message.from_user.id)):
         db.add_user(message.from_user.id)
-        await bot.send_message(message.from_user.id, "Укажите ваш ник!")
+        await bot.send_message(message.from_user.id, f'Приветствую тебя {message.chat.first_name} в нашем боте', reply_markup=Reg_menu())
     else:
-        await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu)
-
-@dp.message_handler()
-async def bot_message(message: types.Message):
-    if message.chat.type == 'private':
-        if message.text == 'ПРОФИЛЬ':
-            user_nickname = "Ваш ник:" + db.get_nickname(message.from_user.id)
-            await bot.send_message(message.from_user.id, user_nickname)
-                
-        elif message.text == 'Купить экскурсию':
-            await bot.send_message(message.from_user.id, "Покупка экскурсии", reply_markup=sub_inline_markup)
-        
-        else:
-            if db.get_signup(message.from_user.id) == 'setnickname':
-                if(len(message.text) > 15):
-                    await bot.send_message(message.from_user.id, "Никнейм не должен превышать 15 символов")
-                elif '@' in message.text or '/' in message.text:
-                    await bot.send_message(message.from_user.id, "Ваш никнейм содержит запрещеный символ!")
-                else:
-                    db.set_nickname(message.from_user.id, message.text)
-                    db.set_signup(message.from_user.id, 'done')
-                    await bot.send_message(message.from_user.id, "Регистрация прошла успешно!", reply_markup=mainMenu)
-            else:
-                await bot.send_message(message.from_user.id, "У вас уже установлен ник!")
+        await bot.send_message(message.from_user.id, f'Приветствую тебя повторно {message.chat.first_name} в нашем боте', reply_markup=mainMenu())
+        await message.delete()   
                 
 # Система оплаты
 @dp.callback_query_handler(text="submonth")
-async def subexcur(call: types.CallbackQuery):
+async def subexcur(call: types.CallbackQuery) -> None:
     await bot.delete_message(call.from_user.id, call.message.message_id)
     await bot.send_invoice(chat_id=call.from_user.id, title="Оформление товара", description="Тестовое описание товара", payload="month_sub", provider_token=YOOTOKEN, currency="RUB", start_parameter="test_bot", prices=[{"label": "Руб", "amount": 15000}])
 
@@ -72,52 +53,52 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def process_pay(message: types.Message):
     if message.successful_payment.invoice_payload == "month_sub":
-        operation = '+'
-        excur_sub = 1
-        db.plus(message.from_user.id, operation, excur_sub)
-        await bot.send_message(message.from_user.id, "Вы купили экскурсию!")
+        db.plus(message.from_user.id, '+', 1)
+        await bot.send_message(message.from_user.id, "Вы купили экскурсию! Вам на счёт начислен 1 балл который вы сможете потратить на экскурсию!")
         
+              
+# Блоки комманд
+
+@dp.message_handler(text=['🛒КУПИТЬ ЭКСКУРСИЮ🛒'])  
+async def buy_excur(message: types.Message) -> None:
+    await bot.send_message(message.from_user.id, "Покупка экскурсии", reply_markup=sub_inline_markup)
+    await message.delete()
+
+@dp.message_handler(text=['🏘ВЫБРАТЬ ГОРОД🏘'])  
+async def sity_set(message: types.Message) -> None:
+    await bot.send_message(message.from_user.id, "Выберите город:", reply_markup=Sity())
+    await message.delete()
+    
+@dp.message_handler(text=['🆘ПОМОЩЬ🆘'])  
+async def help_sos(message: types.Message) -> None:
+    await bot.send_message(message.from_user.id, "/start - перезапук бота")
+    await message.delete()
+ 
+@dp.message_handler(text=['💰БАЛАНС💰'])  
+async def balance_func(message: types.Message) -> None:        
+    user_balance = "Ваш баланс: " + db.get_balance(message.from_user.id) + " баллов\n" + "Что-бы пополнить баллы необходимо нажать на 'КУПИТЬ ЭКСКУРСИЮ'"
+    await bot.send_message(message.from_user.id, user_balance)
+              
+@dp.message_handler(text=['Волгоград'])  # это надо доделать потом с Богданом
+async def volgograd_func(message: types.Message) -> None:
+    await bot.send_message(message.from_user.id, "*Алгоритм экскурсий ещё не реализован*")
+    await message.delete()
+    # markup = types.ReplyKeyboardMarkup(resize_keyboard = True, row_width=len(volgograd_list))
+    # if all_users[message.chat.id]["direction"] == "":
         
-    
-    
-    
-                
-# Блок комманд              
-@dp.message_handler(commands=['Волгоград'])  
-async def volgograd_func(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard = True, row_width=len(volgograd_list))
-    if all_users[message.chat.id]["direction"] == "":
-        buy_button = types.InlineKeyboardButton('Купить_экскурсию')
-        
-        markup.add(buy_button)
-        for i in volgograd_list:
-            markup.add(i)
+    #     for i in volgograd_list:
+    #         markup.add(i)
             
-        await bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
-    else:
-        markup.add(all_users[message.chat.id]["direction"])
-        await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)
+    #     await bot.send_message(message.chat.id, 'Какой сценарий вы хотите выбрать?', reply_markup=markup)
+    # else:
+    #     markup.add(all_users[message.chat.id]["direction"])
+    #     await bot.send_message(message.chat.id, "Какой именно вы сценарий хотите допройти?", reply_markup=markup)  
 
 
 
-@dp.message_handler(text=[''])  
-async def buy_func(message):
-    pass
-    # try:
-    #     await bot.send_message(message.chat.id, "В будущем тут будет система оплаты но будем\nсчитать что вы уже все оплатили")
-    #     all_users[message.chat.id]['condition'] = True
-    #     await bot.send_message(message.chat.id, "Оплата успешно прошла")
-    # except KeyError as key:
-    #     await bot.send_message(message.chat.id, "Извините за неудобства, но начните сначала")
-    #     print(f"[ERROR] error in buy_func {key}")
-    #     await start_func(message)
-    
-
-
-
-# Основной алгоритм экскурсий
+# Основной алгоритм экскурсий пока не работает
 @dp.message_handler(content_types=['text'])  
-async def vol_Scen(message):
+async def vol_Scen(message: types.Message) -> None:
     try:
 
         if message.text == 'Я думаю это первое':
@@ -181,6 +162,7 @@ async def vol_Scen(message):
         print(message.chat.id, "неправильно ввел", message.text)
         await bot.send_message(message.chat.id, "Пожалуйста, пользуйтесь командами")
 
+# активация при запуске бота
 if __name__ == '__main__':
     dp.middleware.setup(ThrottlingMiddleware())
     executor.start_polling(dispatcher=dp,
