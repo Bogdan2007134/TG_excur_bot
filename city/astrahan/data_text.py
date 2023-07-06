@@ -1,0 +1,1 @@
+astrahan_list = []
