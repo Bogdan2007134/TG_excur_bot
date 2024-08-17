@@ -6,7 +6,7 @@ pydantic-settings  == 2.3.2
 sqlalchemy  == 2.0.30
 redis  == 5.0.5
 fastapi-cache2  == 0.2.1
-alembic =  == 1.13.1
+alembic == 1.13.1
 asyncpg  == 0.29.0
 aiosqlite  == 0.20.0
 aiogram-inline-paginations == 0.1.12
