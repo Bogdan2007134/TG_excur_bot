@@ -100,12 +100,13 @@ async def validation_exception_handler(request, exc):
     return await request_validation_exception_handler(request, exc)
 
 
-if __name__ == "__main__":
-    try:
-        logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-        logging.getLogger("fastapi").setLevel(logging.DEBUG)
-        uvicorn.run(
-            app, host=settings.SERVER_HOST, port=settings.SERVER_PORT, workers=True
-        )
-    except Exception as e:
-        logging.error(f"App crashed with error: {e}")
+# if __name__ == "__main__":
+    # try:
+        # logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+        # logging.getLogger("fastapi").setLevel(logging.DEBUG)
+        # uvicorn.run(
+            # app, host=settings.SERVER_HOST, port=settings.SERVER_PORT, workers=True
+        # )
+    # except Exception as e:
+        # logging.error(f"App crashed with error: {e}")
+# 
