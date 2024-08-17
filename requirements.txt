@@ -11,4 +11,5 @@ alembic = "^1.13.1"
 asyncpg = "^0.29.0"
 aiosqlite = "^0.20.0"
 aiogram-inline-paginations = "^0.1.12"
-
+opencv-python = "^4.10.0.84"
+gunicorn = "^23.0.0"
